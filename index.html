@@ -366,8 +366,9 @@
     p.x = px - dragOffsetX;
     p.y = py - dragOffsetY;
     // keep inside
-    p.x = Math.max(-p.pad, Math.min(boardSizePx - 10, p.x));
-    p.y = Math.max(-p.pad, Math.min(boardSizePx - 10, p.y));
+    p.x = Math.max(-p.pad, Math.min(boardSizePx - p.w + p.pad, p.x));
+p.y = Math.max(-p.pad, Math.min(boardSizePx - p.h + p.pad, p.y));
+
     drawAll(dragging);
   }
 
