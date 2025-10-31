@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rompecabezas especial 💕</title>
+  <style>
+    :root{--maxw:700px}
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:20px;display:flex;flex-direction:column;gap:16px;align-items:center;background:#fffafc;color:#333}
+    h2{color:#e55fa2;text-shadow:0 1px 2px rgba(0,0,0,0.1)}
+    #preview{max-width:200px;border-radius:8px;box-shadow:0 4px 8px rgba(0,0,0,0.1)}
+    #puzzle-wrap{width:100%;max-width:var(--maxw);height:var(--maxw);background:#f9f9f9;display:grid;place-items:center;position:relative;overflow:hidden;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.12)}
+    #puzzle{position:relative;width:100%;height:100%}
+    .piece{position:absolute;box-sizing:border-box;cursor:grab;border:1px solid rgba(255,255,255,0.2);touch-action:none}
+    .piece.grabbing{cursor:grabbing}
+    .locked{pointer-events:none;border:1px solid rgba(0,0,0,0.15);box-shadow:inset 0 -6px 12px rgba(0,0,0,0.06)}
+    footer{font-size:14px;color:#666;margin-top:6px;text-align:center}
+  </style>
+</head>
+<body>
+  <h2>💖 Arma este rompecabezas 💖</h2>
+  <img id="preview" alt="Foto de referencia" />
+  <div id="puzzle-wrap"><div id="puzzle"></div></div>
+  <footer>Arrastra las piezas para armar. Si una pieza queda cerca de su posición correcta, encajará automáticamente 💫</footer>
+
+  <script>
+    const puzzleWrap = document.getElementById('puzzle-wrap');
+    const puzzle = document.getElementById('puzzle');
+    const preview = document.getElementById('preview');
+
+    // 👉 Reemplaza esta URL con tu foto
+    const imgURL = 'tu_foto.jpg'; // pon aquí la URL o nombre del archivo en la misma carpeta
+
+    const rows = 8;
+    const cols = 8;
+    const img = new Image();
+    img.src = imgURL;
+    img.onload = ()=>{
+      preview.src = imgURL;
+      createPuzzle();
+    };
+
+    let pieces = [];
+    let pieceW, pieceH;
+    let containerW, containerH;
+    let placedCount = 0;
+    let originalPositions = [];
+
+    function createPuzzle(){
+      puzzle.innerHTML='';
+      pieces=[];originalPositions=[];placedCount=0;
+
+      const wrapW=puzzleWrap.clientWidth;
+      const wrapH=puzzleWrap.clientHeight;
+      const imgRatio=img.naturalWidth/img.naturalHeight;
+      let drawW=wrapW,drawH=wrapH;
+      if(imgRatio>1){drawH=wrapW/imgRatio;if(drawH>wrapH){drawH=wrapH;drawW=drawH*imgRatio;}}
+      else{drawW=wrapH*imgRatio;if(drawW>wrapW){drawW=wrapW;drawH=drawW/imgRatio;}}
+      containerW=drawW;containerH=drawH;
+      puzzle.style.width=containerW+'px';
+      puzzle.style.height=containerH+'px';
+
+      pieceW=Math.floor(containerW/cols);
+      pieceH=Math.floor(containerH/rows);
+
+      const tmp=document.createElement('canvas');
+      tmp.width=containerW;tmp.height=containerH;
+      const ctx=tmp.getContext('2d');
+      ctx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight,0,0,containerW,containerH);
+      const dataURL=tmp.toDataURL();
+
+      let id=0;
+      for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+          const piece=document.createElement('div');
+          piece.className='piece';
+          piece.style.width=pieceW+'px';
+          piece.style.height=pieceH+'px';
+          piece.style.backgroundImage=`url(${dataURL})`;
+          piece.style.backgroundSize=`${containerW}px ${containerH}px`;
+          piece.style.backgroundPosition=`-${c*pieceW}px -${r*pieceH}px`;
+          const tx=c*pieceW;const ty=r*pieceH;
+          piece.dataset.tx=tx;piece.dataset.ty=ty;
+          piece.style.left=Math.random()*(containerW-pieceW)+'px';
+          piece.style.top=Math.random()*(containerH-pieceH)+'px';
+          piece.addEventListener('pointerdown',startDrag);
+          puzzle.appendChild(piece);
+          pieces.push(piece);
+          originalPositions.push({x:tx,y:ty});
+          id++;
+        }
+      }
+    }
+
+    let active=null;let startX=0,startY=0,initLeft=0,initTop=0;
+
+    function startDrag(e){
+      const el=e.currentTarget;
+      active=el;
+      active.setPointerCapture(e.pointerId);
+      active.classList.add('grabbing');
+      startX=e.clientX;startY=e.clientY;
+      initLeft=parseFloat(active.style.left);
+      initTop=parseFloat(active.style.top);
+      active.addEventListener('pointermove',onDrag);
+      active.addEventListener('pointerup',endDrag);
+      active.addEventListener('pointercancel',endDrag);
+    }
+
+    function onDrag(e){
+      if(!active)return;
+      const dx=e.clientX-startX,dy=e.clientY-startY;
+      let nx=initLeft+dx,ny=initTop+dy;
+      nx=Math.max(0,Math.min(containerW-pieceW,nx));
+      ny=Math.max(0,Math.min(containerH-pieceH,ny));
+      active.style.left=nx+'px';active.style.top=ny+'px';
+    }
+
+    function endDrag(e){
+      if(!active)return;
+      active.releasePointerCapture(e.pointerId);
+      active.classList.remove('grabbing');
+      active.removeEventListener('pointermove',onDrag);
+      active.removeEventListener('pointerup',endDrag);
+      active.removeEventListener('pointercancel',endDrag);
+      const tx=parseFloat(active.dataset.tx),ty=parseFloat(active.dataset.ty);
+      const cx=parseFloat(active.style.left),cy=parseFloat(active.style.top);
+      const dist=Math.hypot(cx-tx,cy-ty);
+      const snapThreshold=Math.max(pieceW,pieceH)*0.35;
+      if(dist<=snapThreshold){
+        active.style.left=tx+'px';
+        active.style.top=ty+'px';
+        active.classList.add('locked');
+        active.dataset.locked='true';
+        placedCount++;
+        if(placedCount===rows*cols){setTimeout(()=>alert('¡Lo lograste! 💕'),200);}
+      }
+      active=null;
+    }
+
+    window.addEventListener('resize',()=>{if(img.src)createPuzzle();});
+    document.addEventListener('dragstart',e=>e.preventDefault());
+  </script>
+</body>
+</html>
