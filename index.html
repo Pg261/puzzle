@@ -36,7 +36,7 @@
       <button id="resetBtn">Volver a armar</button>
       <div id="status" style="font-weight:600;color:#444">Piezas colocadas: 0 / 64</div>
     </div>
-    <div id="board-wrap"><div id="board"></div></div>
+    <div id="board-wrap"><canvas id="board"></canvas></div>
     <footer>Arrastra las piezas para armar. Si una pieza queda cerca de su posición correcta, encajará automáticamente 💫</footer>
   </div>
 
@@ -52,6 +52,8 @@
 const IMG_NAME = 'nosotras.jpeg';
 const ROWS = 8, COLS = 8;
 const SNAP_THRESHOLD = 30;
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
 const statusEl = document.getElementById('status');
 const resetBtn = document.getElementById('resetBtn');
 const overlay = document.getElementById('overlay');
@@ -60,73 +62,87 @@ const heartsContainer = document.getElementById('hearts');
 
 let pieces = [];
 let placedCount = 0;
-
-const img = new Image();
+let img = new Image();
 img.src = IMG_NAME;
 img.onload = ()=>{ init(); }
 
 function init(){
-  pieces.forEach(p=>{ if(p.parentNode) p.parentNode.removeChild(p); });
-  pieces=[]; placedCount=0; statusEl.textContent=`Piezas colocadas: 0 / ${ROWS*COLS}`;
-  const cellW = 700 / COLS;
-  const cellH = 700 / ROWS;
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientWidth;
+  pieces = [];
+  placedCount = 0;
+  statusEl.textContent = `Piezas colocadas: 0 / ${ROWS*COLS}`;
+
+  const pieceW = canvas.width / COLS;
+  const pieceH = canvas.height / ROWS;
+
   for(let r=0;r<ROWS;r++){
     for(let c=0;c<COLS;c++){
-      const piece = document.createElement('div');
-      piece.className='piece';
-      piece.style.width = cellW+'px';
-      piece.style.height = cellH+'px';
-      piece.style.position = 'absolute';
-      piece.style.backgroundImage=`url(${IMG_NAME})`;
-      piece.style.backgroundSize = `700px 700px`;
-      piece.style.backgroundPosition = `-${c*cellW}px -${r*cellH}px`;
-      piece.dataset.tx = c*cellW;
-      piece.dataset.ty = r*cellH;
-      piece.style.left = (Math.random()*(window.innerWidth - cellW))+'px';
-      piece.style.top = (Math.random()*(window.innerHeight - cellH))+'px';
-      piece.style.cursor = 'grab';
-      piece.addEventListener('pointerdown', startDrag);
-      document.body.appendChild(piece);
-      pieces.push(piece);
+      pieces.push({
+        x: c * pieceW,
+        y: r * pieceH,
+        targetX: c * pieceW,
+        targetY: r * pieceH,
+        width: pieceW,
+        height: pieceH,
+        grabbed: false,
+        offsetX: 0,
+        offsetY: 0,
+        posX: Math.random() * (window.innerWidth - pieceW),
+        posY: Math.random() * (window.innerHeight - pieceH)
+      });
     }
   }
+
+  drawPieces();
 }
 
-let active=null, startX=0, startY=0, initLeft=0, initTop=0;
-function startDrag(e){
-  active = e.currentTarget;
-  active.setPointerCapture(e.pointerId);
-  active.style.zIndex=1000;
-  startX = e.clientX; startY = e.clientY;
-  initLeft = parseFloat(active.style.left); initTop = parseFloat(active.style.top);
-  active.addEventListener('pointermove', onDrag);
-  active.addEventListener('pointerup', endDrag);
+function drawPieces(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  pieces.forEach(p=>{
+    ctx.drawImage(img, p.x, p.y, p.width, p.height, p.posX, p.posY, p.width, p.height);
+  });
 }
-function onDrag(e){
-  if(!active) return;
-  const dx = e.clientX - startX;
-  const dy = e.clientY - startY;
-  active.style.left = initLeft + dx + 'px';
-  active.style.top = initTop + dy + 'px';
-}
-function endDrag(e){
-  if(!active) return;
-  active.removeEventListener('pointermove', onDrag);
-  active.removeEventListener('pointerup', endDrag);
-  const tx = parseFloat(active.dataset.tx), ty = parseFloat(active.dataset.ty);
-  const cx = parseFloat(active.style.left), cy = parseFloat(active.style.top);
-  const dist = Math.hypot(cx-tx, cy-ty);
-  if(dist <= SNAP_THRESHOLD){
-    active.style.left = tx+'px';
-    active.style.top = ty+'px';
-    active.style.pointerEvents='none';
-    placedCount++;
-    statusEl.textContent=`Piezas colocadas: ${placedCount} / ${ROWS*COLS}`;
-    if(placedCount===ROWS*COLS){ showSuccess(); }
+
+let activePiece = null;
+window.addEventListener('pointerdown', e=>{
+  for(let i=pieces.length-1;i>=0;i--){
+    let p = pieces[i];
+    if(e.clientX>=p.posX && e.clientX<=p.posX+p.width && e.clientY>=p.posY && e.clientY<=p.posY+p.height){
+      activePiece = p;
+      p.grabbed = true;
+      p.offsetX = e.clientX - p.posX;
+      p.offsetY = e.clientY - p.posY;
+      pieces.push(p); // bring to front
+      break;
+    }
   }
-  active.style.zIndex='';
-  active=null;
-}
+});
+
+window.addEventListener('pointermove', e=>{
+  if(activePiece && activePiece.grabbed){
+    activePiece.posX = e.clientX - activePiece.offsetX;
+    activePiece.posY = e.clientY - activePiece.offsetY;
+    drawPieces();
+  }
+});
+
+window.addEventListener('pointerup', e=>{
+  if(activePiece){
+    let dx = activePiece.posX - activePiece.targetX;
+    let dy = activePiece.posY - activePiece.targetY;
+    if(Math.hypot(dx,dy) <= SNAP_THRESHOLD){
+      activePiece.posX = activePiece.targetX;
+      activePiece.posY = activePiece.targetY;
+      placedCount++;
+      statusEl.textContent = `Piezas colocadas: ${placedCount} / ${ROWS*COLS}`;
+      if(placedCount===ROWS*COLS){ showSuccess(); }
+    }
+    activePiece.grabbed = false;
+    activePiece = null;
+    drawPieces();
+  }
+});
 
 function showSuccess(){
   overlay.style.pointerEvents='auto';
