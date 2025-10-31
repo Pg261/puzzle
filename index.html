@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Rompecabeza de Sele💕</title>
+  <title>Rompecabezas especial 💕</title>
   <style>
     :root{--maxw:820px}
     html,body{height:100%}
@@ -59,28 +59,24 @@ const overlay = document.getElementById('overlay');
 const message = document.getElementById('message');
 const heartsContainer = document.getElementById('hearts');
 
-let boardSizePx = 700;
 let pieces = [];
 let placedCount = 0;
 
 function updateBoardSize(){
-  const max = Math.min(boardEl.clientWidth, parseInt(getComputedStyle(boardEl).maxWidth)||700);
-  const size = Math.max(220, max);
-  boardSizePx = size;
+  // nada cambia, solo tamaño de referencia
 }
 
-window.addEventListener('resize', ()=>{ updateBoardSize(); if(pieces.length) init(); });
+window.addEventListener('resize', ()=>{ if(pieces.length) init(); });
 
 const img = new Image();
 img.src = IMG_NAME;
 img.onload = ()=>{ init(); }
 
 function init(){
-  updateBoardSize();
   boardEl.innerHTML='';
   pieces=[]; placedCount=0; statusEl.textContent=`Piezas colocadas: 0 / ${ROWS*COLS}`;
-  const cellW = boardSizePx / COLS;
-  const cellH = boardSizePx / ROWS;
+  const cellW = 700 / COLS;
+  const cellH = 700 / ROWS;
   for(let r=0;r<ROWS;r++){
     for(let c=0;c<COLS;c++){
       const piece = document.createElement('div');
@@ -89,15 +85,16 @@ function init(){
       piece.style.height = cellH+'px';
       piece.style.position = 'absolute';
       piece.style.backgroundImage=`url(${IMG_NAME})`;
-      piece.style.backgroundSize = `${boardSizePx}px ${boardSizePx}px`;
+      piece.style.backgroundSize = `700px 700px`;
       piece.style.backgroundPosition = `-${c*cellW}px -${r*cellH}px`;
       piece.dataset.tx = c*cellW;
       piece.dataset.ty = r*cellH;
+      // colocar piezas fuera del board para mover libremente
       piece.style.left = (Math.random()*(window.innerWidth - cellW))+'px';
       piece.style.top = (Math.random()*(window.innerHeight - cellH))+'px';
       piece.style.cursor = 'grab';
       piece.addEventListener('pointerdown', startDrag);
-      boardEl.appendChild(piece);
+      document.body.appendChild(piece); // mover al body en vez de board
       pieces.push(piece);
     }
   }
@@ -147,12 +144,4 @@ function showSuccess(){
   message.classList.add('show');
 }
 
-document.getElementById('closeMsg').addEventListener('click', ()=>{
-  overlay.style.pointerEvents='none';
-  message.classList.remove('show');
-});
-
-resetBtn.addEventListener('click', init);
-</script>
-</body>
-</html>
+document.getElementById
