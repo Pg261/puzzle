@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Rompecabezas especial 💕</title>
+  <title>Rompecabeza de Sele 💕</title>
   <style>
     :root{--maxw:820px}
     html,body{height:100%}
@@ -52,7 +52,6 @@
 const IMG_NAME = 'nosotras.jpeg';
 const ROWS = 8, COLS = 8;
 const SNAP_THRESHOLD = 30;
-const boardEl = document.getElementById('board');
 const statusEl = document.getElementById('status');
 const resetBtn = document.getElementById('resetBtn');
 const overlay = document.getElementById('overlay');
@@ -62,18 +61,12 @@ const heartsContainer = document.getElementById('hearts');
 let pieces = [];
 let placedCount = 0;
 
-function updateBoardSize(){
-  // nada cambia, solo tamaño de referencia
-}
-
-window.addEventListener('resize', ()=>{ if(pieces.length) init(); });
-
 const img = new Image();
 img.src = IMG_NAME;
 img.onload = ()=>{ init(); }
 
 function init(){
-  boardEl.innerHTML='';
+  pieces.forEach(p=>{ if(p.parentNode) p.parentNode.removeChild(p); });
   pieces=[]; placedCount=0; statusEl.textContent=`Piezas colocadas: 0 / ${ROWS*COLS}`;
   const cellW = 700 / COLS;
   const cellH = 700 / ROWS;
@@ -89,12 +82,11 @@ function init(){
       piece.style.backgroundPosition = `-${c*cellW}px -${r*cellH}px`;
       piece.dataset.tx = c*cellW;
       piece.dataset.ty = r*cellH;
-      // colocar piezas fuera del board para mover libremente
       piece.style.left = (Math.random()*(window.innerWidth - cellW))+'px';
       piece.style.top = (Math.random()*(window.innerHeight - cellH))+'px';
       piece.style.cursor = 'grab';
       piece.addEventListener('pointerdown', startDrag);
-      document.body.appendChild(piece); // mover al body en vez de board
+      document.body.appendChild(piece);
       pieces.push(piece);
     }
   }
@@ -106,12 +98,10 @@ function startDrag(e){
   active.setPointerCapture(e.pointerId);
   active.style.zIndex=1000;
   startX = e.clientX; startY = e.clientY;
-  initLeft = parseFloat(active.style.left);
-  initTop = parseFloat(active.style.top);
+  initLeft = parseFloat(active.style.left); initTop = parseFloat(active.style.top);
   active.addEventListener('pointermove', onDrag);
   active.addEventListener('pointerup', endDrag);
 }
-
 function onDrag(e){
   if(!active) return;
   const dx = e.clientX - startX;
@@ -119,7 +109,6 @@ function onDrag(e){
   active.style.left = initLeft + dx + 'px';
   active.style.top = initTop + dy + 'px';
 }
-
 function endDrag(e){
   if(!active) return;
   active.removeEventListener('pointermove', onDrag);
@@ -144,4 +133,9 @@ function showSuccess(){
   message.classList.add('show');
 }
 
-document.getElementById
+resetBtn.addEventListener('click', ()=>{ init(); overlay.style.pointerEvents='none'; message.classList.remove('show'); heartsContainer.innerHTML=''; });
+document.getElementById('closeMsg').addEventListener('click', ()=>{ overlay.style.pointerEvents='none'; message.classList.remove('show'); heartsContainer.innerHTML=''; });
+
+</script>
+</body>
+</html>
